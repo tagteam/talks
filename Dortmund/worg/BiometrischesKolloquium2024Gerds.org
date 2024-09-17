@@ -1,0 +1,989 @@
+#+TITLE: Emulating target trials in longitudinal register data with time-to-event outcomes
+#+Author: Thomas Alexander Gerds
+#+Latex_header:\institute{University of Copenhagen}
+#+DATE: 
+#+EMAIL:grb615@ku.dk
+#+LaTeX_HEADER: \subtitle{}
+#+LaTeX_HEADER: \definecolor{gray88}{rgb}{.5, 0.95, 0.95}
+#+LaTeX_HEADER: \definecolor{gray77}{rgb}{.5, 0.4, 0.95}
+#+LaTeX_HEADER: \definecolor{gray66}{rgb}{.5, 0.7, 0.95}
+#+LATEX_HEADER:\newcommand{\gbox}[1]{\vspace{.5em}\begin{tcolorbox}[boxrule=0pt,colback=pink] #1 \end{tcolorbox}}
+#+setupfile:~/emacs-genome/snps/org-templates/setup-beamer.org
+
+* Trial emulation in electronic health records
+
+#+BEGIN_EXPORT latex
+\addtobeamertemplate{frametitle}{}{%
+\begin{textblock*}{0.8\textwidth}(25.2em,18.6em)
+\includegraphics[height=.3cm,width=.3cm]{bvb.png}
+\end{textblock*}
+}
+#+END_EXPORT
+
+*** Register data 
+
+Every citizen in Denmark has a person identification number.
+\vfill
+
+The national records include:
+\vfill
+- birth date, immigration/emigration dates, date of death
+- type (ATC) and redemption dates of medical prescriptions
+- dates and reasons (ICD) for hospital admission
+- blood tests, surgery ...
+- education, income, household ... 
+\vfill
+Denmark Statistics: a playground for scientists ...
+
+*** To be avoided: immortal time bias
+
+  [[~/research/Talks/Dortmund/worg/immortal-time-bias.jpg]]
+
+*** A wrong conclusion which could have been avoided
+
+``Prescription trajectories can provide novel insights into how
+individuals’ drug use change over time, identify suboptimal or futile prescriptions and suggest initial treatments different from ﬁrst
+line therapies. Observations of this kind may also be important when updating treatment guidelines.''[fn:2]
+
+\vfill\pause
+No question was asked! 
+\vfill
+The result was obtained by data mining!?
+
+[fn:2] Aguayo-Orozco et al. NPJ digital medicine, 4(1):150, 2021.
+
+
+*** The Cox regression model with time-dependent covariates 
+
+# - Latent outcome event time: \(T^{(1)}\)
+# - Latent time of death without outcome: \(T^{(2)}\)
+# - Observe \(\min(T^{(1)},T^{(2)},C)\)
+  
+\vfill
+The outcome-specific hazard rate at time \(t\) depends on the treatment and covariate history:
+\vfill
+#+begin_export latex
+\mybox{
+\begin{equation*}
+\lambda(t|\bar A(t),\bar L(t))=\lambda_0(t)\exp\{\beta \bar A(t)+\gamma \bar L(t)\}
+\end{equation*}
+}
+#+end_export
+\vfill
+The hazard ratio \(e^\beta\) can be estimated via maximum partial likelihood, Poisson regression or conditional logistic regression (nested case control design).
+# \vfill
+# \pause
+# This model cannot provide guidance on the treatment decision unless someone defines the time point where the treatment is decided.
+
+\pause
+\begin{tcolorbox}[boxrule=0pt,colback=pink] {Can anyone ask a meaningful question such that \(e^\beta\) is the \sout{answer} target parameter?} \end{tcolorbox}
+# \gbox{Can anyone ask a meaningful question such that \(e^\beta\) is the \sout{answer} target parameter?}    
+*** Another example: using Robin's g-methods
+
+Cardiovascular effect of discontinuing statins for primary prevention
+at the age of 75 years: a nationwide population-based cohort study in
+France [fn:4]
+
+- Aims :: The effect of statin discontinuation on cardiovascular outcomes
+- Enrollment :: All statin users subjects who turned 75 in 2012-2014 
+- Methods? :: The hazard ratio comparing statin discontinuation with continuation was estimated using a *marginal structural model* adjusting for both baseline and time-varying covariates
+- Results?? :: Statin discontinuation was associated with a 33% (HR: 1.33) increased risk of admission for cardiovascular event in 75-year-old primary prevention patients.
+
+[fn:4] Giral et al. European heart journal, 40(43):3516--3525, 2019.
+
+*** Adjusted cumulative incidence: Igitt? 
+
+  [[~/research/Talks/Dortmund/worg/Screenshot_2024-09-07_09-26-25.jpg]]
+
+*** The french study is half-baked
+
+The authors define a proper framework for survival analysis:
+ - population
+ - time zero
+ - time to cardiovascular outcome
+\vfill
+The authors use a marginal structural model to avoid time-varying
+confounding. \vfill
+\hrule
+\vfill
+But:
+
+- What is the interpretation of the adjusted cumulative incidence curve and the adjusted hazard ratio?
+- When is the time of statins discontinuation?
+- What about the competing risk of death due to other causes?
+
+*** Avoidable flaws in observational analyses[fn:3]
+
+The increasing availability of large healthcare databases is fueling
+an intense debate on whether real-world data should play a role in the
+assessment of the benefit-risk of medical treatments.
+\vfill 
+
+In many observational studies, for example, statin users were found to
+have a substantially lower risk of cancer than in meta-analyses of
+randomized trials. While such discrepancies are often attributed to a
+lack of randomization in the observational studies, they may be
+explained by flaws that can be avoided by
+
+#+begin_export latex
+\begin{center}
+\large \bf explicitly emulating a target trial. 
+\end{center}
+#+end_export
+
+[fn:3] Dickerman, ..., *Hernan*. Nature medicine, 25(10):1601--1606, 2019.
+
+*** Emulating a target trial in register data[fn:1]
+
+- Step 1 :: enrollment date (time zero for survival analysis, inclusion/exclusion)
+\vfill
+- Step 2 :: the target trial protocols dictate the treatment at any time during followup
+\vfill
+- Step 3 :: define the target parameters as contrasts of the expected outcomes -- had *all subjects* \sout{been randomized}{ adhered} to the protocols
+\vfill
+- Step 4 :: estimation of target parameters
+\vfill
+- Step 5 :: communication of results and limitations
+
+[fn:1] Applying the roadmap of targeted learning van der Laan et al. 
+
+*** COMMENT To be improved: missing link to clinical value 
+
+\begin{center}
+\includegraphics[page = 1,width=.9\linewidth]{~/research/Talks/Dortmund/worg/Sara_Hägg_PIIS2589537024002682.pdf}
+\end{center}
+
+* Separate what we estimate from how we estimate it
+
+*** 
+
+The register data look like this:
+
+| id | sex   | age at enrollment | date of enrollment |
+|----+-------+-------------------+--------------------|
+|  1 | woman |                74 |         2019-07-02 |
+|  2 | man   |                69 |         2016-01-13 |
+|  3 | woman |                88 |         2021-11-27 |
+\vfill
+Treatment:
+
+| id |       date | drug    |
+|----+------------+---------|
+|  1 | 2019-07-02 | GLP1-RA |
+|  1 | 2019-10-08 | GLP1-RA |
+|  1 | 2021-01-07 | GLP1-RA |
+|  2 | 2016-01-13 | SGLT2i   |
+|  2 | 2016-08-27 | SGLT2i   |
+|  3 | 2021-11-28 | GLP1-RA |
+|  3 | 2021-12-03 | SGLT2i |
+
+*** 
+
+Hospital diagnoses:
+
+| id | hospital admission date | diagnosis             |
+|----+-------------------------+-----------------------|
+|  2 |              2018-02-15 | hypertension          |
+|  2 |              2018-09-03 | hypertension          |
+|  3 |              2022-01-02 | arterial fibrillation |
+\vfill
+Concomitant medical treatment:
+
+| id | redemption date | drug    |
+|----+-----------------+---------|
+|  2 |      2018-12-24 | ACE/ARP |
+|  3 |      2022-02-11 | NOAC    |
+|  3 |      2022-08-10 | NOAC    |
+\vfill
+Outcome
+
+| id | cardiovascular disease | date of death | end of followup |
+|----+------------------------+---------------+-----------------|
+|  1 | NA                     |            NA |      2024-09-17 |
+|  2 | NA                     |    2019-03-03 |      2024-09-17 |
+|  3 | 2023-02-07             |    2023-02-07 |      2024-09-17 |
+
+*** Emulating trials in register data
+
+In register studies there is often no natural control group
+of patients who are not exposed to one of the drugs.
+
+- Matching can be used.
+- A medical diagnosis (biomarker above threshold) can be used.
+- Comparative effectiveness study: active comparator arms
+\vfill\pause\hrule\vfill
+
+Example: We include all diabetes patients who initiate medical treatment
+with one of the following anti-diabetic drugs: GLP1-RA, SGLT2i between 2015
+and 2022:
+\vfill
+
+- Time zero is at (or 30 days after) the first purchase of the drug
+- We follow the patients through the registers until comorbidity, death, emigration, or 2024, whatever comes first  
+
+*** Treatment assignment in the target trial
+
+The protocols of the target trial dictate the treatment(s) given at
+any time (doctor visit) during the target trial period.\vfill
+
+Notation:
+#+begin_export latex
+\begin{equation*}
+\pi^*(t\mid L(t-),A(t-))
+\end{equation*}
+#+end_export
+\vfill\small
+Examples:
+
+#+ATTR_LATEX: :align p{4cm}lp{4cm}
+| Protocol                                    | Type of intervention | \(\pi^*(t\mid L(t-),A(t-))\) |
+|---------------------------------------------+----------------------+------------------------------|
+| Never treat                                 | Static               | 1                            |
+| Always treat                                | Static               | 0                            |
+| Treat for 2 years                           | Static               | \(1{\{t>2\}}\)               |
+| Treat if \(L(t-)>\xi\)                      | Dynamic              | \(1{\{L(t-)>\xi\}}\)         |
+| Treat with probability  0.8                 | Stochastic           | 0.8                          |
+| If \(L(t-)>\xi\) treat with probability 0.8 | Stochastic, Dynamic  | \(1{\{L(t-)>\xi\}}0.8\)      |
+
+*** Treatment assignment in the target trial
+
+Example of treatment regimens:
+\vfill
+- Protocol 1 :: Patients should use GLP1-RA continuously for 3 years and not intensify with SGLT2i
+- Protocol 2 :: Patients should use SGLT2i continuously for 3 years and not intensify with GLP1-RA
+\vfill Protocol 1 assigns 100% probability for GLP1-RA and 0%
+probability for SGLT2i:
+#+begin_export latex
+\begin{align*}
+\pi^{1*}(t) &= (1,0). \intertext{Protocol 2 is defined similarly:}
+\pi^{2*}(t) &= (0,1)
+\end{align*}
+#+end_export
+
+*** The target parameter (aka the estimand)
+
+The analysis of the emulated target trial estimates the absolute risks of the
+outcome(s) if hypothetically all patients had followed
+the treatment protocols (per-protocol effects).  \vfill
+
+Example: 3-year risk of cardiovascular disease under \(\pi^{j*}\) and
+differences thereof:
+#+begin_export latex
+\begin{equation*}
+\P_{\pi^{1*}}(Y(3) = 1)-\P_{\pi^{2*}}(Y(3) = 1)
+\end{equation*}
+#+end_export
+  \vfill
+
+The analysis uses the information of the
+time-varying covariates (comorbidity, co-medicine) to achieve a good
+compromise between the available data, the desire of the
+investigators, and the causal assumptions: /positivity/, /sequential coarsening at random (NUC)/, /consistency/.
+
+*** bla
+:PROPERTIES:
+:BEAMER_env: ignoreheading
+:END:
+\setbeamercolor{background canvas}{bg=black}
+
+*** 
+
+\huge \color{white}
+Estimation on \sout{discrete} discretized time scale
+
+*** bla
+:PROPERTIES:
+:BEAMER_env: ignoreheading
+:END:
+\setbeamercolor{background canvas}{bg=white}
+
+*** new R-package 'rtmle' (work in progress)
+:PROPERTIES:
+:BEAMER_opt: shrink=25
+:END:
+#+ATTR_LATEX: :options otherkeywords={}, deletekeywords={data,table,character,as,rep,date,start,list,seq,c}
+#+BEGIN_SRC R  :results output raw  :exports code  :session *R* :cache yes  
+library(rtmle)
+library(data.table)
+x <- rtmle_init(intervals=6,
+                name_id="id",
+                name_outcome="cvd_death",
+                name_competing="Dead",
+                name_censoring="Censored",
+                censored_label="censored")
+baseline_data(x) <- data.table(id=1:3,
+                               sex=c("woman","man","woman"),
+                               age=c(74,69,88),
+                               start_followup_date=c("2019-07-02","2016-01-13","2021-11-27"))
+treatment_data(x) <- list("GLP1RA"=data.table(id=c(1,1,1,1,2),
+                                              date=c("2019-07-02",
+                                                     "2019-10-08",
+                                                     "2021-01-07",
+                                                     "2021-11-28")),
+                          "SGLT2i"=data.table(id=c(2,3,3),
+                                              date=c("2016-01-13",
+                                                     "2016-08-27",
+                                                     "2021-12-03")))
+timevar_data(x) <- list("hypertension"=data.table(id=c(2,2),
+                                                  date=c("2018-02-15",
+                                                         "2018-09-03"),
+                                                  value=c(1,1)),
+                        "af"=data.table(id=3,date="2022-01-02",value=1))
+#+END_SRC
+
+*** new R-package 'rtmle' (work in progress)
+:PROPERTIES:
+:BEAMER_opt: shrink=25
+:END:
+\vspace{2em}
+#+ATTR_LATEX: :options otherkeywords={}, deletekeywords={data,table,character,as,rep,date,start,list,seq,c}
+#+BEGIN_SRC R  :results output raw  :exports code  :session *R* :cache yes  
+x$long_data$outcome_data <- data.table(id = 1,
+                                       date = "2023-02-07")
+x$long_data$censored_data <- data.table(id = c(1,2,3),
+                                        date = rep("2024-09-17",3))
+x$long_data$competingrisk_data <- data.table(id = c(2,3),
+                                             date = c("2019-03-03",
+                                                      "2023-02-07"))
+# protocol for emulated trial
+protocol(x) <- list(name = "always GLP1RA",
+                    treatment_variables = c("GLP1RA","SGLT2i"),
+                    intervention = c(1,0))
+target(x) <- list(name = "Outcome_risk",
+                  strategy = "additive",
+                  estimator = "tmle",
+                  estimands = 3,
+                  protocols = "always GLP1RA")
+# 3 years followup in six 6 months long intervals 
+prepare_data(x) <- list(treatment_variables = "GLP1RA",
+                        reset = TRUE,
+                        intervals = seq(0,30.45*36,30.45*6))
+# data in wide format 
+x$prepared_data[["always GLP1RA"]]$data
+#+END_SRC
+
+*** The register data forced onto a discretized time scale
+:PROPERTIES:
+:BEAMER_opt: shrink=25
+:END:
+#+BEGIN_EXAMPLE
+       id    sex   age hypertension_0  af_0 GLP1RA_0 SGLT2i_0 Censored_1 cvd_death_1 Dead_1
+   <char> <char> <num>          <num> <num>    <num>    <num>     <fctr>       <num>  <num>
+1:      1  woman    74              0     0        1        0 uncensored           0      0
+2:      2    man    69              0     0        0        1 uncensored           0      0
+3:      3  woman    88              0     0        0        0 uncensored           0      0
+   hypertension_1  af_1 GLP1RA_1 SGLT2i_1 Censored_2 cvd_death_2 Dead_2 hypertension_2  af_2
+            <num> <num>    <num>    <num>     <fctr>       <num>  <num>          <num> <num>
+1:              0     0        1        0 uncensored           0      0              0     0
+2:              0     0        0        0 uncensored           0      0              0     0
+3:              0     1        0        1 uncensored           0      0              0     0
+   GLP1RA_2 SGLT2i_2 Censored_3 cvd_death_3 Dead_3 hypertension_3  af_3 GLP1RA_3 SGLT2i_3
+      <num>    <num>     <fctr>       <num>  <num>          <num> <num>    <num>    <num>
+1:        0        0 uncensored           0      0              0     0        0        0
+2:        0        0 uncensored           0      0              0     0        0        0
+3:        0        0 uncensored           0      1             NA    NA       NA       NA
+   Censored_4 cvd_death_4 Dead_4 hypertension_4  af_4 GLP1RA_4 SGLT2i_4 Censored_5 cvd_death_5
+       <fctr>       <num>  <num>          <num> <num>    <num>    <num>     <fctr>       <num>
+1: uncensored           0      0              0     0        1        0 uncensored           0
+2: uncensored           0      0              0     0        0        0 uncensored           0
+3:       <NA>           0     NA             NA    NA       NA       NA       <NA>           0
+   Dead_5 hypertension_5  af_5 GLP1RA_5 SGLT2i_5 Censored_6 cvd_death_6
+    <num>          <num> <num>    <num>    <num>     <fctr>       <num>
+1:      0              0     0        1        0 uncensored           0
+2:      0              1     0        0        0 uncensored           0
+3:     NA             NA    NA       NA       NA       <NA>           0
+#+END_EXAMPLE
+
+
+
+*** Introduction to the notation
+
+Uncensored data, one interval \([0,t_1]\) [fn:5]
+
+#+begin_export latex
+\begin{equation*}
+X = (L_0,A_0,Y_1)
+\end{equation*}
+#+end_export
+\vfill
+
+Observed likelihood
+
+#+begin_export latex
+\begin{equation*}
+\P_X = \underbrace{\P_{Y_1|A_0,L_0}}_{F_1}
+       \underbrace{\P_{A_0|L_0}}_{\pi_0}
+       \underbrace{\P_{L_0}}_{H_0}
+\end{equation*}
+#+end_export
+\vfill
+Likelihood in the target trial 
+
+#+begin_export latex
+\begin{equation*}
+P^* = F_1\,\pi_0^*\,H_0
+\end{equation*}
+#+end_export
+
+
+[fn:5] \(Y_1 =1\{T\le t_1\})\)
+
+*** Robins g-methods[fn:11]
+
+
+| Data                     | \(\{(L_{0i},A_{0i},Y_{1i})\}_{i = 1}^n = \{X_i\}_{i = 1}^n\)     |
+| Outcome regression model | \(\hat F_1\)                                                     |
+| Empirical distribution   | \(\hat H_0 = \frac 1 n \sum_{i = 1}^n L_{0,i}\)                  |
+| Empirical distribution   | \(\mathrm{I}\negthinspace\P_n = \frac 1 n \sum_{i = 1}^n X_{i}\) |
+| Propensity of treatment  | \(\hat\pi_0\)                                                    |
+\vfill
+Estimator 1: g-formula 
+
+#+begin_export latex
+\begin{equation*}
+\hat \P_g^* = \hat F_1 \pi_0^*\hat H_0
+\end{equation*}
+#+end_export
+\vfill
+
+Estimator 2: Inverse probability weighting
+
+#+begin_export latex
+\begin{equation*}
+\hat \P^*_{\operatorname{IPTW}} = \frac{\mathrm{I}\negthinspace\P_n\,\pi_0^*}{\hat\pi_0}
+\end{equation*}
+#+end_export
+
+[fn:11] Robins (1986) Mathematical modelling, 7(9-12):1393--1512
+
+*** Longitudinal setting  [fn:9]
+
+Discretized time scale:
+
+#+begin_export latex
+\begin{equation*}
+[0 \cdots\cdots\cdots t_1 \cdots\cdots\cdots t_2]
+\end{equation*}
+#+end_export
+
+\vfill
+
+Data for two time intervals:
+
+#+begin_export latex
+\begin{equation*}
+X=(L_0,A_0,Y_1,L_1,A_1,Y_2). 
+\end{equation*}
+#+end_export
+\vfill
+The joint probability distribution: 
+
+#+begin_export latex
+\only<1>{\begin{gather*}
+\P_X = \P_{Y_2|A_1,L_1,Y_1,A_0,L_0}
+       \P_{A_1|L_1,Y_1,A_0,L_0}
+       \P_{L_1|Y_1,A_0,L_0}
+       \P_{Y_1|A_0,L_0}
+       \P_{A_0|L_0}
+       \P_{L_0}
+\end{gather*}
+}
+\only<2>{
+\begin{gather*}
+\P_X = \underbrace{\P_{Y_2|A_1,L_1,Y_1,A_0,L_0}}_{F_2}
+       \underbrace{\P_{A_1|L_1,Y_1,A_0,L_0}}_{\pi_1}
+       \underbrace{\P_{L_1|Y_1,A_0,L_0}}_{H_1}
+       \underbrace{\P_{Y_1|A_0,L_0}}_{F_1}
+       \underbrace{\P_{A_0|L_0}}_{\pi_0}
+       \underbrace{\P_{L_0}}_{H_0}
+\end{gather*}
+}
+#+end_export
+
+[fn:9] no censoring, no competing risks,  \(Y_1 =1\{T\le t_1\}\), \(Y_2 =1\{T\le t_2\}\)
+
+
+*** Longitudinal causal inference on discretized time scale
+
+Uncensored data, two intervals [fn:6]
+
+#+begin_export latex
+\begin{equation*}
+X = (L_0,A_0,Y_1,L_1,A_1,Y_2)
+\end{equation*}
+#+end_export
+\vfill
+
+Observed likelihood
+
+#+begin_export latex
+\begin{equation*}
+\P_X = \underbrace{\P_{Y_2|A_1,L_1,Y_1,A_0,L_0}}_{F_2}
+       \underbrace{\P_{A_1|L_1,Y_1,A_0,L_0}}_{\pi_1}
+       \underbrace{\P_{L_1|Y_1,A_0,L_0}}_{H_1}
+       \underbrace{\P_{Y_1|A_0,L_0}}_{F_1}
+       \underbrace{\P_{A_0|L_0}}_{\pi_0}
+       \underbrace{\P_{L_0}}_{H_0}
+       \end{equation*}
+#+end_export
+\vfill
+Likelihood in the target trial 
+
+#+begin_export latex
+\begin{equation*}
+\P^* = F_2\,\pi^*_1\,H_1\,F_1\,\pi_0^*\,H_0
+\end{equation*}
+#+end_export
+
+[fn:6] Changes of A(t) and L(t) in last interval (t_1,t_2] are ignored.
+
+*** Robins g-methods (continued)
+
+Estimator 1: g-formula
+
+#+begin_export latex
+\begin{equation*}
+\hat \P_g^* = \hat F_2 \pi_1^*\color{red}{\hat H_1}\color{black} \hat F_1 \pi_0^*\hat H_0
+\end{equation*}
+#+end_export
+\vfill
+
+Estimator 2: Inverse probability weighting
+
+#+begin_export latex
+\begin{equation*}
+\hat \P^*_{\operatorname{IPTW}} = \frac{\mathrm{I}\negthinspace\P_n\,\pi_0^*\pi_1^*}{\color{purple}{\hat\pi_0\hat\pi_1}\color{black}}
+\end{equation*}
+#+end_export
+\vfill\pause
+
+Estimator 3: Iterative conditional expectations AKA Sequential regression
+
+#+begin_export latex
+\begin{align*}
+\E[Y_2] &= \E[\E[Y_2|L_0]]\\
+       &= \E[\E[\E[Y_2|L_0,A_0]|L_0]]\\
+       &= \E[\E[\E[\E[Y_2|L_0,A_0,L_1]|L_0,A_0]|L_0]]\\
+       &= \E[\E[\E[\E[\E[Y_2|L_0,A_0,L_1,A_1]|L_0,A_0,L_1]|L_0,A_0]|L_0]]
+\end{align*}
+#+end_export
+
+*** Iterative conditional expectations: discretized time
+
+Estimator 3:  Robins (1999), Bang & Robins (2005)
+
+#+begin_export latex
+\begin{equation*}
+\E[Y_2] = \E[\E[\underbrace{\E[\E[\underbrace{\E[Y_2|L_0,A_0,L_1,A_1]}_{R_2(L_0,A_0,L_1,A_1)}|L_0,A_0,L_1]|L_0,A_0]}_{R_1(L_0,A_0)}|L_0]]
+\end{equation*}
+#+end_export
+
+- Step 1 :: \(\hat R_2\): Regress \(Y_2\) on \(L_0,A_0,L_1,A_1\)
+- Step 2 :: Integrate \(\hat R_2\) with respect to \(\pi_1^*\)
+- Step 3 :: \(\hat R_1\): Regress \color{blue}result of Step 2 \color{black} on \(L_0,A_0,L_1,A_1\)  
+- Step 4 :: Integrate \(\hat R_1\) with respect to \(\pi_0^*\)
+- Step 5 :: Average with respect to \(\hat H_0\)
+
+*** Longitudinal targeted minimum loss based estimator
+
+A motivation for the roadmap of targeted learning is the
+problem that the various nuisance parameter regression models could be
+misspecified.  \vfill
+
+The targeted minimum loss based estimator can be consistent even if
+some of the nuisance parameter models are misspecified.  \vfill
+
+For longitudinal data analysis, the sequential regression estimator is
+moved closer to the unknown truth by sequential updating with
+
+#+BEGIN_CENTER
+``clever covariates''
+#+END_CENTER
+which depend on the inverse propensity of treatment weights.[fn:17]
+
+[fn:17]   van der Laan & Gruber (2012) The international journal of biostatistics
+
+*** Longitudinal targeted minimum loss based estimator
+
+Under the usual causal assumptions and if the convergence rate of the estimators of the
+nuisance parameters is sufficiently fast we can estimate the target parameter:
+
+#+begin_export latex
+\begin{align*}
+\psi: \mathcal M &\mapsto \mathrm I\negthinspace\mathrm R, \intertext{where \(\psi\) is a suitably smooth functional defined on a set of probability measures, at the \(\sqrt n\)-rate}
+\sqrt n (\psi(\hat \P^*_{\operatorname{LTMLE}})-\psi(\P)) &= \frac 1 {\sqrt n}\sum_{i = 1}^n\operatorname{IF}_\P(X_i)+ {\it o}_\P(1)
+\end{align*}
+#+end_export
+  
+*** Longitudinal targeted minimum loss based estimator
+
+The efficient influence function for the target parameter (two intervals):
+
+#+begin_export latex
+\begin{equation*}
+%\operatorname{IF}_\P(Y_2,A_1,L_1,Y_1,A_0,L_0)
+\operatorname{IF}_\P(X) = (Y_2 - R_2) \frac{\pi_1^*\pi_0^*}{\pi_1\pi_0} + 
+(R_2-R_1)\frac{\pi_0^*}{\pi_0} + R_1 - \psi(\P)
+\end{equation*}
+#+end_export
+\vfill
+Targeting algorithm:
+
+- Step 1 :: Initial estimators: \(\hat\pi_1, \hat\pi_0\)
+- Step 2 ::  \(\hat R_2\): Regress \(Y_2\) on \(L_0,A_0,L_1,A_1\)
+- Step 3 ::  \(\hat R_2^*\): TMLE update: Loss function and parametric fluctuation model to solve the current part of the efficient influence function 
+- Step 4 :: Integrate  \(\hat R_2^*\) with respect to \(\pi^*_1\)
+- Step 5 :: Regress result of Step 4 on \(A_0, L_0\)
+- Step 6 :: ...
+
+
+*** bla
+:PROPERTIES:
+:BEAMER_env: ignoreheading
+:END:
+\setbeamercolor{background canvas}{bg=black}
+
+*** 
+
+\huge \color{white}
+The \color{gray66}{many} \color{gray88}{shades} \color{gray77}{of} censoring\color{black}
+
+*** bla
+:PROPERTIES:
+:BEAMER_env: ignoreheading
+:END:
+\setbeamercolor{background canvas}{bg=white}
+
+*** Censoring clash
+
+Censored data are the existence of survival analysis!
+
+\vfill
+
+We define the target parameters in the uncensored world and then
+use the censored data to estimate them.  \vfill
+
+The target parameters do not depend on the censoring mechanism.
+\vfill\hrule\vfill
+When investigators decide to censor patients at intermediate events (such as side effects of a drug or change of treatment) they implicitly change the protocol of the target trial and the interpretation of the target parameter!
+
+
+*** Multi-state model
+
+#+BEGIN_SRC R :results file graphics :file ~/research/Talks/Dortmund/worg/ms1.pdf :exports none :session *R* :cache yes :width 8 :height 8
+library(prodlim)
+plotIllnessDeathModel(stateLabels = c("State\nat enrollment","Cardiovascular\ndisease","Death"),tagBoxes = TRUE)
+#+END_SRC
+
+#+RESULTS[(2024-09-16 17:35:51) 0fbbab98c15a832e1b85099c6b4b67e3fc06ad0b]:
+[[file:~/research/Talks/Dortmund/worg/ms1.pdf]]
+
+#+ATTR_LATEX: :width 0.6\textwidth
+#+CAPTION: Multi-state model: at any time the patient is in one of the states. Censoring is not a state!
+[[file:~/research/Talks/Dortmund/worg/ms1.pdf]]
+
+*** Statistical methods (statins discontinuation paper)
+
+A weighted Cox proportional hazard model was used to estimate the
+hazard ratio of statin discontinuation vs continuation, controlling
+for baseline and time-varying confounding.
+
+Weighting creates a pseudo-population, in which at each time the
+probability of being treated is unrelated to \colorbox{black}{the measured and}
+time-varying confounders. Also, compared conventional multivariate Cox
+models, weighted Cox proportional hazard models are more flexible in
+that they do not rely on the assumptions of proportional hazards and
+no \colorbox{black}{effect  for each of the covariates.}In 
+order to  \colorbox{black}{also correct for} potentially *informative*
+*censoring at treatment resumption*, the patient’s initial weight was
+multiplied by the inverse probability of remaining uncensored up until
+month t, based on the patient's covariate history. The resulting
+weights are called ``inverse probability of treatment and censoring
+weights'' (IPTCW). Under the assumptions of no unmeasured confounding,
+positivity, correct model specification, and consistency, this
+approach estimates the parameter of a marginal structural model, which
+can be interpreted as average causal effect of treatment
+discontinuation in the original study population.
+
+*** Certain potential biases (statins discontinuation paper)
+
+With the study design adopted, time-related bias, in particular
+immortal time bias, was avoided by \dots
+\vfill
+# i) defining the study population
+# based on information on a fixed time period (up to month 2 following
+# the month of the 75th birthday) and starting follow-up at a time-point
+# after this fixed time period (month 3), and ii) using a time-dependent
+# exposure variable whose value at month m is defined by information up
+# until m-1 (Suissa 2008, Suissa et al. 2012).  Prevalent users may be a
+# concern in studies including both prevalent and new users (Danaei et
+# al. 2012). In the present study population, prevalent user bias per se
+# was limited, as all patients were adherent to statin therapy during
+# the two years before their 75th birthday.
+\dots Potential bias due to
+treating competing events as censoring events as in our analyses is
+also small: in the main analysis, only 2.7% of patients were *censored for death* and, \dots
+\vfill
+\dots  The percentage of
+competing events was therefore much lower than 10%, the critical value
+reported in the literature (Austin et al., 2016).
+\vfill\pause
+*Censor the nonsense!*
+
+*** Multi-state model 
+
+#+BEGIN_SRC R :results file graphics :file ~/research/Talks/Dortmund/worg/msm2.pdf :exports none :session *R* :cache yes :width 10 :height 10
+## 4 state models
+x=data.frame(from=c("Initiated\nstatins","Statins\ndiscontinuation","Statins\ndiscontinuation","Statins\nresumption","Initiated\nstatins"),
+             to=c("Statins\ndiscontinuation","Cardiovascular\ndisease","Statins\nresumption","Cardiovascular\ndisease","Cardiovascular\ndisease"),
+             time=1:5)
+y=with(x,Hist(time=time,event=list(from=from,to=to)))
+U <- plot(y,tagBoxes = TRUE,arrowLabel3.x = 62,arrowLabel3.y = 70,arrowLabel5.x = 38,arrowLabel5.y = 55)
+#+END_SRC
+
+#+RESULTS[(2024-09-16 17:35:23) cf93b303c1f371b2ce7b25f91b2f6e099a0995d7]:
+[[file:~/research/Talks/Dortmund/worg/msm2.pdf]]
+
+#+name: fig:1
+#+ATTR_LATEX: :width 0.6\textwidth
+#+CAPTION: At any time each patient is in one of the states!? \newline Death? \newline Statins resumption?
+[[file:~/research/Talks/Dortmund/worg/msm2.pdf]]
+
+
+*** Investigator defined censoring affects the interpretation 
+
+Review of statins discontinuation paper (Giral et al.):
+\vfill
+
+- the target parameter is a hazard ratio [fn:27]
+- no explicit definition of target trial protocols
+- censoring at statins resumption
+- censoring at death
+\vfill \hrule\vfill
+Possible protocols for the target trial:\vspace{1em}
+
+- Protocol 1 :: During the next 5 years, discontinue statins treatment with a probability of 50% at any day (or doctor visit). Do not resume statins treatment. Stay alive!
+- Protocol 2 :: Continue statins treatment for 5 years. Stay alive!
+
+[fn:27] Hernan (2010) The hazards of hazard ratios. Epidemiology.
+
+*** Censoring and competing risks in LTMLE
+
+The order of the data in wide format with censoring and competing risks:
+
+#+begin_export latex
+\begin{equation*}
+X = (L_0,A_0,C_1,Y_1,D_1,L_1,A_1,C_2,Y_2,D_2,\dots,Y_K)
+\end{equation*}
+#+end_export
+\vfill
+- probabilities are modelled conditional on the history (variables to the left). We denote by \(G_{k}\) the conditional distribution of being uncensored.
+- competing risk probabilities are not modelled but \(D_k\) is used to
+  remove patients from being at risk. (However, the presence of competing risks is
+  important for the clinical interpretation!)
+- when outcome event \(Y_k\) and censoring \(C_k\) occur in same interval,
+  then evidently outcome is not censored!
+
+*** LTMLE algorithm
+
+0. Prepare algorithm by estimating all propensity score and censoring
+   models conditional on current history.
+1. Fit model for outcome at last time point conditional on past
+2. Get targeted predictions for previous time point via TMLE update step with fluctuation model and
+   clever covariates:
+   #+begin_export latex
+   \begin{equation*}
+\prod_{k = 0}^K\frac{\pi_k^* 1\{C_k = 0\}}{\hat\pi_k \hat G_k}
+   \end{equation*}
+   #+end_export
+3. Fit model with targeted predictions as outcome conditional on past ...
+
+*** LTMLE algorithm
+
+0. Prepare algorithm by estimating all propensity score and censoring
+   models conditional on past.
+1. Fit model for outcome at last time point conditional on past
+2. Get targeted predictions for previous time point via TMLE update step with fluctuation model and
+   clever covariates:
+#+begin_export latex
+\begin{equation*}
+\texttt{\color{red}gbounds:\hfill\color{black}}\prod_{k = 0}^K\frac{\pi_k^* 1\{C_k = 0\}}{\max(\color{red}{0.01}\color{black},\hat\pi_k \hat G_k)}\hfill
+\end{equation*}
+#+end_export
+3. Fit model with targeted predictions as outcome conditional on past ...
+
+*** bla
+:PROPERTIES:
+:BEAMER_env: ignoreheading
+:END:
+\setbeamercolor{background canvas}{bg=black}
+
+*** 
+
+\huge \color{white}
+Truncation of weights
+
+*** bla
+:PROPERTIES:
+:BEAMER_env: ignoreheading
+:END:
+\setbeamercolor{background canvas}{bg=white}
+
+*** Statins discontinuation paper
+
+  [[~/research/Talks/Dortmund/worg/statins-stop-truncation.jpg]]
+\small
+- \(^a\) Weights were truncated by resetting the value of the weights greater (less) than the p (1-p) percentile to the value of the p (1-p) percentile.
+- \(^b\) No weight truncation.
+- \(^c\) Constant weights, i.e. no adjustment.
+
+*** Statins discontinuation paper
+
+This table illustrates the tradeoff between bias
+and variance: with increasing weight truncation, confidence intervals
+were shorter, but bias increased
+
+\vfill
+Assuming estimation without weight truncation is unbiased.
+\vfill
+
+In this case, it can be reasonably argued to
+report the result with the weights truncated at the 0.5% and 99.5%
+percentiles, on the basis of centering of the weights at a value of 1
+and the reduction in the 1/minimum and maximum weights.
+
+*** The gbounds issue
+
+The default behavior of the R-package =ltmle= makes sure that (the
+product of) the estimated propensity scores and censoring
+probabilities cannot become smaller than
+#+begin_export latex
+\begin{equation*}
+\texttt{gbounds} = 0.01.
+\end{equation*}
+#+end_export
+
+There is no good reason for us to use that particular value, or any
+other value, hence we subsequently set it to =0=. \vfill The =gbounds=
+argument affects both the point estimate via the clever weights of the
+tmle-update step BUT even more the influence function based plug-in
+estimate of the standard errors.  \vfill
+
+*** Effect of  =gbounds= on LTMLE point estimate
+#+ATTR_LATEX: :width 0.8\textwidth
+[[~/research/Epidemi/dual-diabetes-treatment/reports/manuscript_figures/gbounds_effect_on_ltmle_estimate.pdf]]
+
+*** Effect of =gbounds= on standard errors (via influence function)
+#+ATTR_LATEX: :width 0.8\textwidth
+[[~/research/Epidemi/dual-diabetes-treatment/reports/manuscript_figures/gbounds_effect_on_standarderror_estimate.pdf]]
+
+
+
+* Details
+
+*** This \sout{is} could be the last page
+
+
+- The target trial helps to separate what we estimate from how we estimate it
+- Hazard ratios are not causal and have no directly clinical interpretation, in particular not when there are competing risks
+- The choice of which intermediate events are treated as censoring should be reflected in the protocol because it changes the interpretation of the result (see Robins & Finkelstein, 2000)
+- Truncation of weights: a very powerful hyperparameter or simply a huge problem?
+- Modeling of the process history of multicategorical treatment processes
+- Superlearning treatment/comorbidity process histories
+- Continuous time version of longitudinal targeted minimum loss based estimation (Rytgaard et al, 2022, Annals of Statistics)
+
+*** \sout{Censoring} Intervening on intermediate events
+
+``More precisely, we will report four different causal analyses.''[fn:88]
+\vfill
+
+**** The first analysis
+
+Compare mortality in the two treatment arms with death censored only
+by loss to or end of follow-up.
+
+**** The second analysis
+
+Regard a subject as dependently censored by the minimum of time to
+loss to follow-up and time to treatment crossover.
+
+This analysis attempts to estimate what the survival
+curves would have been if the possibility of crossover to the
+other treatment arm after the development of PCP had been
+eliminated from the treatment protocol.
+
+*** \sout{Censoring} Intervening on intermediate events
+
+**** The third analysis
+
+Regard subjects as dependently censored at the minimum of time to loss to follow-up, time to
+treatment crossover, and time to voluntarily stopping therapy
+(for nonmedically related reasons).
+
+
+For public health purposes, this analysis may be preferred since
+it attempts to estimate the survival benefit had no subject voluntarily
+stopped their assigned therapy without medical indication.
+
+**** The fourth analysis
+
+Regard subjects as censored at the minimum of
+time to loss to follow-up, crossover, or stopping therapy for
+any reason.
+
+In this analysis, we are attempting to compare the survival if all
+subjects were forced to stay on their assigned therapy.
+
+Even if we could successfully estimate this parameter, it would only
+be of public health relevance if, as discussed above, the toxicities
+that led to medically indicated termination of therapy could be
+ameliorated with appropriate palliative therapy.
+
+[fn:88] Robins & Finkelstein (2000). Biometrics 56, pages 779--788
+
+*** Cheap subsampling bootstrap confidence interval[fn:73]
+
+1. Draw without replacement $m < n$ times from the observations to obtain a subsample $\mathcal{D}^*_m$. Estimate $\Psi(P)$ on this subsample to obtain $\hat{\Psi}_m^*$ of $\Psi(P)$. Repeat this $B \geq 1$
+   times to obtain the resamples $\hat{\Psi}_{(m,1)}^*, \dots, \hat{\Psi}_{(m,B)}^*$. Calculate also $\hat{\Psi}_n$ based on the full sample $\mathcal{D}_n$. 
+2. Calculate $S= \sqrt{\frac{1}{B} \sum_{b=1}^B \left(\hat{\Psi}_{(m,b)}^*-\hat{\Psi}_n \right)^2}$ and obtain the confidence interval 
+   #+begin_export latex
+   \begin{equation}
+   \mathcal{I}_{(m,n)} = \left(\hat{\Psi}_n-t_{B,1-\alpha/2} \sqrt{\frac{m}{n-m}} S, \hat{\Psi}_n+t_{B,1-\alpha/2} \sqrt{\frac{m}{n-m}} S \right), \label{eq:cs_ci}
+   \end{equation}
+   #+end_export
+   where $t_{B,1-\alpha/2}$ is the $1-\alpha/2$ quantile of a $t$ - distribution with $B$ degrees of freedom. 
+
+[fn:73] Work by Johan Ohlendorff (2024) based on the general approach of Henry Lam (2022, A Cheap Bootstrap Method for Fast Inference) 
+
+* Notes :noexport:
+
+time-dependent covariates = internal variables related to the disease proces. do not condition on them
+illness-death model
+time-dependent mediator
+IPW paul + scheike
+stabilized weights change the protocol of the emulated trial
+non-adaptive truncation (not removed as n to infty)  changes the interpretation of the target parameter
+
+* Abstract :noexport:
+
+# Emulating target trials in longitudinal register data with time-to-event outcomes
+
+In this talk I will discuss the longitudinal analysis of electronic
+health records by emulating a target trial. Pharmacoepidemiology
+studies the use and effects of drugs in a large population. Here
+target trial emulation enables replication of results from a
+randomized trial and beyond. For example, we can identify all diabetes
+patients who started one of several alternative medical treatments in
+the Danish registers. We could be interested in the cardiovascular
+disease risk if hypothetically all patients had been assigned to using
+one of the drugs continuously for 5 years. To compare longitudinal
+treatment regimens we use a series of emulated trials which define
+estimands as contrasts of the cardiovascular disease
+risks. Longitudinal targeted minimum loss estimation projects the
+observed data onto a discrete time grid, estimates sequences of
+nuisance parameter models for treatment propensity and censoring
+probabilities, and then estimates the target parameters by updating a
+sequential regression formula backward in time. The estimation
+procedure accounts for treatment changes, censoring and
+non-cardiovascular mortality as a competing risk.
+
