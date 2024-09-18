@@ -85,7 +85,7 @@ at the age of 75 years: a nationwide population-based cohort study in
 France [fn:4]
 
 - Aims :: The effect of statin discontinuation on cardiovascular outcomes
-- Enrollment :: All statin users subjects who turned 75 in 2012-2014 
+- Enrollment :: All statin users who turned 75 in 2012-2014 
 - Methods? :: The hazard ratio comparing statin discontinuation with continuation was estimated using a *marginal structural model* adjusting for both baseline and time-varying covariates
 - Results?? :: Statin discontinuation was associated with a 33% (HR: 1.33) increased risk of admission for cardiovascular event in 75-year-old primary prevention patients.
 
@@ -102,7 +102,7 @@ The authors define a proper framework for survival analysis:
  - time zero
  - time to cardiovascular outcome
 \vfill
-The authors use a marginal structural model to avoid time-varying
+The authors use a marginal structural model and inverse probability weighting to deal with time-varying
 confounding. \vfill
 \hrule
 \vfill
@@ -145,7 +145,7 @@ explained by flaws that can be avoided by
 \vfill
 - Step 5 :: communication of results and limitations
 
-[fn:1] Applying the roadmap of targeted learning van der Laan et al. 
+[fn:1] Following the roadmap of targeted learning (van der Laan et al.)
 
 *** COMMENT To be improved: missing link to clinical value 
 
@@ -208,18 +208,18 @@ Outcome
 In register studies there is often no natural control group
 of patients who are not exposed to one of the drugs.
 
-- Matching can be used.
+- Matching can be used (e.g., exposure density sampling).
 - A medical diagnosis (biomarker above threshold) can be used.
-- Comparative effectiveness study: active comparator arms
+- Comparative effectiveness study: active comparator arms.
 \vfill\pause\hrule\vfill
 
-Example: We include all diabetes patients who initiate medical treatment
+Example: We include all diabetes patients in Denmark who initiated medical treatment
 with one of the following anti-diabetic drugs: GLP1-RA, SGLT2i between 2015
 and 2022:
 \vfill
 
 - Time zero is at (or 30 days after) the first purchase of the drug
-- We follow the patients through the registers until comorbidity, death, emigration, or 2024, whatever comes first  
+- We follow the patients through the registers until comorbidity, death, emigration, or 2024, whatever comes first.
 
 *** Treatment assignment in the target trial
 
@@ -240,7 +240,7 @@ Examples:
 |---------------------------------------------+----------------------+------------------------------|
 | Never treat                                 | Static               | 1                            |
 | Always treat                                | Static               | 0                            |
-| Treat for 2 years                           | Static               | \(1{\{t>2\}}\)               |
+| Treat for 2 years                           | Static               | \(1{\{t\le 2\}}\)            |
 | Treat if \(L(t-)>\xi\)                      | Dynamic              | \(1{\{L(t-)>\xi\}}\)         |
 | Treat with probability  0.8                 | Stochastic           | 0.8                          |
 | If \(L(t-)>\xi\) treat with probability 0.8 | Stochastic, Dynamic  | \(1{\{L(t-)>\xi\}}0.8\)      |
@@ -275,10 +275,12 @@ differences thereof:
 #+end_export
   \vfill
 
-The analysis uses the information of the
+The analyst uses the information of the
 time-varying covariates (comorbidity, co-medicine) to achieve a good
-compromise between the available data, the desire of the
-investigators, and the causal assumptions: /positivity/, /sequential coarsening at random (NUC)/, /consistency/.
+compromise between:
+- the available data
+- the desire of the investigators
+- the causal assumptions: /positivity/, /sequential coarsening at random (NUC)/, /consistency/.
 
 *** bla
 :PROPERTIES:
@@ -574,14 +576,14 @@ Estimator 3:  Robins (1999), Bang & Robins (2005)
 
 #+begin_export latex
 \begin{equation*}
-\E[Y_2] = \E[\E[\underbrace{\E[\E[\underbrace{\E[Y_2|L_0,A_0,L_1,A_1]}_{R_2(L_0,A_0,L_1,A_1)}|L_0,A_0,L_1]|L_0,A_0]}_{R_1(L_0,A_0)}|L_0]]
+\E[Y_2] = \E[\E[\underbrace{\E[\E[\underbrace{\E[Y_2|L_0,A_0,L_1,A_1]}_{Q_2(L_0,A_0,L_1,A_1)}|L_0,A_0,L_1]|L_0,A_0]}_{Q_1(L_0,A_0)}|L_0]]
 \end{equation*}
 #+end_export
 
-- Step 1 :: \(\hat R_2\): Regress \(Y_2\) on \(L_0,A_0,L_1,A_1\)
-- Step 2 :: Integrate \(\hat R_2\) with respect to \(\pi_1^*\)
-- Step 3 :: \(\hat R_1\): Regress \color{blue}result of Step 2 \color{black} on \(L_0,A_0,L_1,A_1\)  
-- Step 4 :: Integrate \(\hat R_1\) with respect to \(\pi_0^*\)
+- Step 1 :: \(\hat Q_2\): Regress \(Y_2\) on \(L_0,A_0,L_1,A_1\)
+- Step 2 :: Integrate \(\hat Q_2\) with respect to \(\pi_1^*\)
+- Step 3 :: \(\hat Q_1\): Regress \color{blue}result of Step 2 \color{black} on \(L_0,A_0,L_1,A_1\)  
+- Step 4 :: Integrate \(\hat Q_1\) with respect to \(\pi_0^*\)
 - Step 5 :: Average with respect to \(\hat H_0\)
 
 *** Longitudinal targeted minimum loss based estimator
@@ -622,17 +624,17 @@ The efficient influence function for the target parameter (two intervals):
 #+begin_export latex
 \begin{equation*}
 %\operatorname{IF}_\P(Y_2,A_1,L_1,Y_1,A_0,L_0)
-\operatorname{IF}_\P(X) = (Y_2 - R_2) \frac{\pi_1^*\pi_0^*}{\pi_1\pi_0} + 
-(R_2-R_1)\frac{\pi_0^*}{\pi_0} + R_1 - \psi(\P)
+\operatorname{IF}_\P(X) = (Y_2 - Q_2) \frac{\pi_1^*\pi_0^*}{\pi_1\pi_0} + 
+(Q_2-Q_1)\frac{\pi_0^*}{\pi_0} + Q_1 - \psi(\P)
 \end{equation*}
 #+end_export
 \vfill
 Targeting algorithm:
 
 - Step 1 :: Initial estimators: \(\hat\pi_1, \hat\pi_0\)
-- Step 2 ::  \(\hat R_2\): Regress \(Y_2\) on \(L_0,A_0,L_1,A_1\)
-- Step 3 ::  \(\hat R_2^*\): TMLE update: Loss function and parametric fluctuation model to solve the current part of the efficient influence function 
-- Step 4 :: Integrate  \(\hat R_2^*\) with respect to \(\pi^*_1\)
+- Step 2 ::  \(\hat Q_2\): Regress \(Y_2\) on \(L_0,A_0,L_1,A_1\)
+- Step 3 ::  \(\hat Q_2^*\): TMLE update: Loss function and parametric fluctuation model to solve the current part of the efficient influence function 
+- Step 4 :: Integrate  \(\hat Q_2^*\) with respect to \(\pi^*_1\)
 - Step 5 :: Regress result of Step 4 on \(A_0, L_0\)
 - Step 6 :: ...
 
@@ -807,7 +809,7 @@ X = (L_0,A_0,C_1,Y_1,D_1,L_1,A_1,C_2,Y_2,D_2,\dots,Y_K)
    clever covariates:
 #+begin_export latex
 \begin{equation*}
-\texttt{\color{red}gbounds:\hfill\color{black}}\prod_{k = 0}^K\frac{\pi_k^* 1\{C_k = 0\}}{\max(\color{red}{0.01}\color{black},\hat\pi_k \hat G_k)}\hfill
+\texttt{\color{red}gbounds:\hfill\color{black}}\prod_{k = 0}^K\frac{\pi_k^* 1\{C_k = 0\}}{\max(\color{red}{0.01}\color{black},\hat\pi_k \hat G_k)}
 \end{equation*}
 #+end_export
 3. Fit model with targeted predictions as outcome conditional on past ...
@@ -837,7 +839,7 @@ Truncation of weights
 - \(^b\) No weight truncation.
 - \(^c\) Constant weights, i.e. no adjustment.
 
-*** Statins discontinuation paper
+*** From the statins discontinuation paper ...
 
 This table illustrates the tradeoff between bias
 and variance: with increasing weight truncation, confidence intervals
@@ -856,7 +858,7 @@ and the reduction in the 1/minimum and maximum weights.
 
 The default behavior of the R-package =ltmle= makes sure that (the
 product of) the estimated propensity scores and censoring
-probabilities cannot become smaller than
+probabilities cannot become smaller than (by default)
 #+begin_export latex
 \begin{equation*}
 \texttt{gbounds} = 0.01.
@@ -900,39 +902,38 @@ estimate of the standard errors.  \vfill
 **** The first analysis
 
 Compare mortality in the two treatment arms with death censored only
-by loss to or end of follow-up.
+*by loss to or end of follow-up*.
 
 **** The second analysis
 
 Regard a subject as dependently censored by the minimum of time to
-loss to follow-up and time to treatment crossover.
-
+*loss to follow-up and time to treatment crossover*.
+\vfill
 This analysis attempts to estimate what the survival
 curves would have been if the possibility of crossover to the
 other treatment arm after the development of PCP had been
-eliminated from the treatment protocol.
+*eliminated* from the treatment protocol.
 
 *** \sout{Censoring} Intervening on intermediate events
 
 **** The third analysis
 
-Regard subjects as dependently censored at the minimum of time to loss to follow-up, time to
-treatment crossover, and time to voluntarily stopping therapy
+Regard subjects as dependently censored at the minimum of *time to loss to follow-up, time to*
+*treatment crossover, and time to voluntarily stopping therapy*
 (for nonmedically related reasons).
 
 
 For public health purposes, this analysis may be preferred since
-it attempts to estimate the survival benefit had no subject voluntarily
-stopped their assigned therapy without medical indication.
+it attempts to estimate the survival benefit *had no subject voluntarily*
+*stopped* their assigned therapy without medical indication.
 
 **** The fourth analysis
 
 Regard subjects as censored at the minimum of
-time to loss to follow-up, crossover, or stopping therapy for
-any reason.
+*time to loss to follow-up, crossover, or stopping therapy for any reason.*
 
 In this analysis, we are attempting to compare the survival if all
-subjects were forced to stay on their assigned therapy.
+subjects were *forced to stay* on their assigned therapy.
 
 Even if we could successfully estimate this parameter, it would only
 be of public health relevance if, as discussed above, the toxicities
